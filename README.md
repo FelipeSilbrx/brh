@@ -1,3 +1,4 @@
+
 # Descrição do Projeto 
   O projeto  BRH é um sistema de gestão de recursos humanos. Seu objetivo é permitir a gestão dos colaboradores e departamentos da empresa. Com isso, conseguiremos futuramente dimensionar melhor a força de trabalho necessária em cada projeto pela alocação exata de colaboradores necessários em cada um.
   
