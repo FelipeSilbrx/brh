@@ -1,0 +1,173 @@
+/**
+ * Tarefa 1: Criar procedure insere_projeto
+ */ 
+CREATE OR REPLACE PROCEDURE brh.insere_projeto (
+	p_nome IN brh.projeto.nome%TYPE,
+	p_responsavel IN brh.projeto.responsavel%TYPE
+) AS
+BEGIN
+	INSERT INTO brh.projeto
+		(nome, responsavel, inicio)
+	VALUES 
+		(p_nome, p_responsavel, sysdate);
+END;
+
+
+--- Teste da tarefa 1
+BEGIN
+	brh.insere_projeto('Projeto Teste', 'Z123');	
+END; 
+
+
+/**
+ * Tarefa 2: Criar função calcula_idade
+ */
+CREATE OR REPLACE FUNCTION brh.calcula_idade(
+	p_data IN date
+)
+RETURN float AS
+BEGIN
+	RETURN nvl(floor(months_between(sysdate, p_data) / 12), 0);
+END;
+
+--- Teste da tarefa 2
+SELECT brh.calcula_idade(to_date('01/01/2000', 'dd/mm/yyyy')) 
+  FROM dual;
+
+ 
+ /**
+  * Tarefa 4: Criar function finaliza_projeto
+  */
+CREATE OR REPLACE FUNCTION brh.finaliza_projeto(
+	p_id IN brh.projeto.id%type
+) 
+RETURN DATE AS
+
+	v_data_fim DATE;
+BEGIN
+	v_data_fim := sysdate;
+
+	UPDATE brh.projeto
+	   SET fim = v_data_fim
+	 WHERE id = p_id;
+	
+	RETURN v_data_fim;
+END;
+
+--- Teste da tarefa 4
+DECLARE 
+	v_data DATE;
+BEGIN 
+	v_data := brh.finaliza_projeto(1);
+	dbms_output.put_line('Data de finalização: ' || v_data);
+END;
+
+
+/**
+ * Tarefa 5: validar novo projeto
+ */
+CREATE OR REPLACE PROCEDURE brh.insere_projeto (
+	p_nome IN brh.projeto.nome%TYPE,
+	p_responsavel IN brh.projeto.responsavel%TYPE
+) AS
+BEGIN
+
+	IF p_nome IS NULL OR length(p_nome) < 2 THEN
+		raise_application_error(-20000, 'Nome de projeto inválido! Deve ter dois ou mais caracteres.');
+	END IF;
+
+	INSERT INTO brh.projeto	(nome, responsavel, inicio)	VALUES (p_nome, p_responsavel, sysdate);
+END;
+
+--- Teste da tarefa 5
+BEGIN
+	brh.insere_projeto('A', 'Z123');	
+END;
+
+
+/*
+ * Tarefa 6: Validar cálculo de idade
+ */
+CREATE OR REPLACE FUNCTION brh.calcula_idade(
+	p_data IN date
+)
+RETURN float AS
+BEGIN
+	IF sysdate < p_data THEN 
+		raise_application_error(-20001, 'Impossível calcular idade! Data inválida: ' || p_data);
+	END IF;
+
+	RETURN nvl(floor(months_between(sysdate, p_data) / 12), 0);
+END;
+
+
+--- Teste da tarefa 6
+SELECT brh.calcula_idade(sysdate) FROM dual;
+
+
+/*
+ * Tarefa 8: Criar define_atribuicao
+ */
+CREATE OR REPLACE PROCEDURE brh.define_atribuicao (
+	p_nome_colaborador varchar2,
+	p_nome_projeto varchar2,
+	p_nome_papel brh.papel.nome%type
+) AS
+
+	v_matricula_colaborador brh.colaborador.matricula%TYPE;
+
+	v_id_projeto brh.projeto.id%TYPE;
+	v_id_papel brh.papel.id%TYPE;
+
+	e_colaborador_inexistente EXCEPTION;
+	e_projeto_inexistente EXCEPTION;
+BEGIN
+	
+	BEGIN 
+		SELECT matricula
+		  INTO v_matricula_colaborador
+		  FROM brh.colaborador
+		 WHERE lower(nome) = lower(p_nome_colaborador);
+		EXCEPTION 
+			WHEN no_data_found THEN
+				raise e_colaborador_inexistente;
+	END;
+	
+	BEGIN 
+		SELECT id
+		  INTO v_id_projeto
+		  FROM brh.projeto
+		 WHERE lower(nome) = lower(p_nome_projeto);
+		EXCEPTION 
+			WHEN no_data_found THEN
+				raise e_projeto_inexistente;
+	END; 
+	
+	BEGIN 
+		SELECT id
+		  INTO v_id_papel
+		  FROM brh.papel
+		 WHERE lower(nome) = lower(p_nome_papel);
+		EXCEPTION 
+			WHEN no_data_found THEN
+				INSERT INTO brh.papel (nome) VALUES (p_nome_papel) RETURN id INTO v_id_papel;
+	END;
+	
+	INSERT INTO brh.atribuicao
+		(colaborador, projeto, papel)
+	VALUES 
+		(v_matricula_colaborador, v_id_projeto, v_id_papel);
+
+EXCEPTION 
+	WHEN e_colaborador_inexistente THEN
+		raise_application_error(-20002, 'Colaborador inexistente: ' || p_nome_colaborador);
+	WHEN e_projeto_inexistente THEN
+		raise_application_error(-20003, 'Projeto inexistente: ' || p_nome_projeto);
+	
+END;
+
+--- Teste da tarefa 8
+BEGIN
+	brh.define_atribuicao('Ana', 'Comex', 'Papel inexistente');
+	brh.define_atribuicao('Ana', 'Comex', 'Desenvolvedor(a)');
+END;
