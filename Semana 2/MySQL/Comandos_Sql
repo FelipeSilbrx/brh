@@ -1,0 +1,67 @@
+#--relatorio departamento
+select sigla, nome 
+from brh.departamento
+order by nome;
+
+#--relatorio dependentes
+select colaborador.nome, dependente.nome, dependente.data_nascimento ,dependente.parentesco 
+from brh.colaborador inner join brh.dependente on colaborador.matricula = dependente.colaborador
+order by colaborador.nome, dependente.nome;
+
+#--inserir novo colaborador em projeto BI
+insert into brh.papel 
+	(nome) 
+values 
+	('Especialista de Negócios'); 
+    
+insert into brh.departamento 
+	(sigla, nome, chefe, departamento_superior)
+values
+	('SEDES', 'Seção de Desenvolvimento de Soluções',  'Z999', null);
+
+insert into brh.colaborador 
+	(matricula, nome, cpf, email_pessoal, email_corporativo, salario, departamento, cep, complemento_endereco)
+values
+	('Z999', 'Fulando de Tal', '110.256.534-24', 'FulandodeTal@email.com', 'FulandodeTal@corp.com', '5000', 'SEDES', '50721-640', 'Casa 14');
+    
+insert into brh.endereco
+	(cep, uf, cidade, bairro, logradouro)
+values
+	('50721-640', 'PE', 'Recife', 'Cordeiro', 'Rua rio tejipio');
+
+insert into brh.telefone_colaborador 
+	(colaborador, numero, tipo)
+values
+	('Z999', '(61)9 9999-9999', 'R');
+    
+insert into brh.projeto 
+	(nome, responsavel, inicio, fim)
+values 
+('BI', 'Z999', '2020-08-01', '2021-08-31');
+    
+insert into brh.atribuicao 
+	(projeto, colaborador, papel)
+values 
+	(5, 'Z999', 8);    
+    
+set foreign_key_checks = 1;
+
+#--Deletar departamento SECAP
+delete from atribuicao 
+ where colaborador in ('H123', 'M123', 'R123', 'W123');
+  
+delete from telefone_colaborador 
+ where colaborador in ('H123', 'M123', 'R123', 'W123');
+  
+delete from dependente
+ where colaborador in ('H123', 'M123', 'R123', 'W123');
+
+update departamento 
+   set chefe = 'A123'
+ where sigla = 'SECAP';
+ 
+delete from colaborador 
+ where departamento = 'SECAP';
+ 
+delete from departamento 
+ where sigla = 'SECAP';
