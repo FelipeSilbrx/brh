@@ -1,0 +1,226 @@
+/*FILTRAR DEPENDENTE*/
+SELECT
+    c.nome AS nome_colaborador,
+    d.nome AS nome_dependente,
+    d.data_nascimento
+FROM
+         dependente d
+    INNER JOIN colaborador c ON c.matricula = d.colaborador
+WHERE
+    lower(d.nome) LIKE '%h%'
+    OR to_char(data_nascimento, 'MM') IN ( 04, 05, 06 )
+ORDER BY
+    c.nome,
+    d.nome;
+/*LISTAR O COLABORADOR COM MAIOR SALARIO*/
+SELECT
+    nome,
+    salario
+FROM
+    colaborador
+ORDER BY
+    salario DESC;
+
+/*Relatório de senioridade */
+SELECT
+    matricula,
+    nome,
+    salario,
+    CASE
+        WHEN salario <= 3000                THEN
+            'Junior'
+        WHEN salario BETWEEN 3001 AND 6000  THEN
+            'Pleno'
+        WHEN salario BETWEEN 6001 AND 20000 THEN
+            'Senior'
+        ELSE
+            'Corpo Diretor'
+    END senioridade
+FROM
+    colaborador
+ORDER BY
+    salario DESC;
+
+/* Listar Colaboradores no projeto*/
+SELECT
+    d.nome   AS nome_departamento,
+    p.nome   AS nome_projeto,
+    COUNT(*) AS quantidade_colaboradores
+FROM
+         departamento d
+    INNER JOIN colaborador c ON c.departamento = d.sigla
+    INNER JOIN atribuicao  a ON a.colaborador = c.matricula
+    INNER JOIN projeto     p ON p.id = a.projeto
+GROUP BY
+    d.nome,
+    p.nome
+ORDER BY
+    d.nome,
+    p.nome;
+
+/*Listar colaboradores com mais dependentes*/ 
+SELECT 
+    c.nome   AS nome_colaborador,
+    COUNT(*) AS quantidade_dependente
+FROM
+         dependente d
+    INNER JOIN colaborador c ON c.matricula = d.colaborador     
+GROUP BY
+    c.nome
+    
+HAVING COUNT(*) > 1
+    
+ORDER BY
+   count(*) desc; 
+   
+   select * from dependente;
+   
+/*Listar faixa etária dos dependentes*/
+select colaborador, cpf, nome, data_nascimento, parentesco,
+nvl(floor((months_between(sysdate, data_nascimento) / 12)), 0) idade,
+case 
+when nvl(floor((months_between(sysdate, data_nascimento) / 12)),0) < 18 then
+'Menor de idade'
+else 
+'Maior de idade'
+end faixa_etaria
+from dependente
+order by colaborador, nome;
+
+/*---Analisar necessidade de criar view---*/
+/*View FILTRAR DEPENDENTE*/
+CREATE VIEW vwFiltrarDependente as 
+SELECT
+    c.nome AS nome_colaborador,
+    d.nome AS nome_dependente,
+    d.data_nascimento
+FROM
+         dependente d
+    INNER JOIN colaborador c ON c.matricula = d.colaborador
+WHERE
+    lower(d.nome) LIKE '%h%'
+    OR to_char(data_nascimento, 'MM') IN ( 04, 05, 06 )
+ORDER BY
+    c.nome,
+    d.nome;
+
+/*View Listar colaborador com maior salário*/
+CREATE VIEW VWCOLABORADORMAXSALARIO AS
+SELECT
+    nome,
+    salario
+FROM
+    colaborador
+ORDER BY
+    salario DESC;
+/*VIEW Relatório de senioridade */
+CREATE VIEW VWRELATORIOSENIORIDADE AS
+SELECT
+    matricula,
+    nome,
+    salario,
+    CASE
+        WHEN salario <= 3000                THEN
+            'Junior'
+        WHEN salario BETWEEN 3001 AND 6000  THEN
+            'Pleno'
+        WHEN salario BETWEEN 6001 AND 20000 THEN
+            'Senior'
+        ELSE
+            'Corpo Diretor'
+    END senioridade
+FROM
+    colaborador
+ORDER BY
+    salario DESC;
+
+/* VIEW Listar Colaboradores no projeto*/
+CREATE VIEW VWCOLABORADORESPROJETO AS
+SELECT
+    d.nome   AS nome_departamento,
+    p.nome   AS nome_projeto,
+    COUNT(*) AS quantidade_colaboradores
+FROM
+         departamento d
+    INNER JOIN colaborador c ON c.departamento = d.sigla
+    INNER JOIN atribuicao  a ON a.colaborador = c.matricula
+    INNER JOIN projeto     p ON p.id = a.projeto
+GROUP BY
+    d.nome,
+    p.nome
+ORDER BY
+    d.nome,
+    p.nome;
+/*VIEW Listar colaboradores com mais dependentes*/ 
+CREATE VIEW VWCOLABORADORESMAXDEPEN AS
+SELECT 
+    c.nome   AS nome_colaborador,
+    COUNT(*) AS quantidade_dependente
+FROM
+         dependente d
+    INNER JOIN colaborador c ON c.matricula = d.colaborador     
+GROUP BY
+    c.nome
+    
+HAVING COUNT(*) > 1
+    
+ORDER BY
+   count(*) desc; 
+   
+   select * from dependente;
+
+/*VIEW Listar faixa etária dos dependentes*/
+CREATE VIEW VWFAIXAETARIA AS
+select colaborador, cpf, nome, data_nascimento, parentesco,
+nvl(floor((months_between(sysdate, data_nascimento) / 12)), 0) idade,
+case 
+when nvl(floor((months_between(sysdate, data_nascimento) / 12)),0) < 18 then
+'Menor de idade'
+else 
+'Maior de idade'
+end faixa_etaria
+from dependente
+order by colaborador, nome;
+
+--- Tarefa: Relatório de plano de saúde
+SELECT colaborador, sum(valor) AS total FROM (
+	SELECT f.colaborador, 100 AS valor
+	  FROM brh.vw_faixa_etaria_dependente f
+	 WHERE f.parentesco = 'Cônjuge'
+	 UNION 
+	SELECT f.colaborador, 50 AS valor
+	  FROM brh.vw_faixa_etaria_dependente f
+	 WHERE f.parentesco = 'Filho(a)' 
+	   AND f.faixa_etaria = 'Maior de idade'
+	 UNION ALL
+	SELECT f.colaborador, 25 AS valor
+	  FROM brh.vw_faixa_etaria_dependente f
+	 WHERE f.parentesco = 'Filho(a)' 
+	   AND f.faixa_etaria = 'Menor de idade'
+	 UNION ALL
+	SELECT matricula, taxa_plano_saude
+      FROM brh.vw_senioridade_colaborador
+)
+GROUP BY colaborador
+ORDER BY colaborador;
+
+--- Tarefa: Paginar listagem de colaboradores
+SELECT * FROM (
+	SELECT rownum AS linha, c.* 
+	  FROM brh.colaborador c 
+	 ORDER BY c.nome
+)
+WHERE linha BETWEEN 0 AND 10;
+
+--- Tarefa: Listar colaboradores que participaram de todos os projetos
+SELECT DISTINCT a.colaborador
+  FROM brh.atribuicao a
+ WHERE NOT EXISTS (
+ 	SELECT 1 FROM brh.projeto p
+ 	 WHERE NOT EXISTS (
+ 	 	SELECT 1 
+ 	 	  FROM brh.atribuicao a2 
+ 	 	 WHERE a2.colaborador = a.colaborador 
+ 	 	   AND a2.projeto = p.id
+ 	 )
+ );
