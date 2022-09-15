@@ -181,3 +181,46 @@ else
 end faixa_etaria
 from dependente
 order by colaborador, nome;
+
+--- Tarefa: Relatório de plano de saúde
+SELECT colaborador, sum(valor) AS total FROM (
+	SELECT f.colaborador, 100 AS valor
+	  FROM brh.vw_faixa_etaria_dependente f
+	 WHERE f.parentesco = 'Cônjuge'
+	 UNION 
+	SELECT f.colaborador, 50 AS valor
+	  FROM brh.vw_faixa_etaria_dependente f
+	 WHERE f.parentesco = 'Filho(a)' 
+	   AND f.faixa_etaria = 'Maior de idade'
+	 UNION ALL
+	SELECT f.colaborador, 25 AS valor
+	  FROM brh.vw_faixa_etaria_dependente f
+	 WHERE f.parentesco = 'Filho(a)' 
+	   AND f.faixa_etaria = 'Menor de idade'
+	 UNION ALL
+	SELECT matricula, taxa_plano_saude
+      FROM brh.vw_senioridade_colaborador
+)
+GROUP BY colaborador
+ORDER BY colaborador;
+
+--- Tarefa: Paginar listagem de colaboradores
+SELECT * FROM (
+	SELECT rownum AS linha, c.* 
+	  FROM brh.colaborador c 
+	 ORDER BY c.nome
+)
+WHERE linha BETWEEN 0 AND 10;
+
+--- Tarefa: Listar colaboradores que participaram de todos os projetos
+SELECT DISTINCT a.colaborador
+  FROM brh.atribuicao a
+ WHERE NOT EXISTS (
+ 	SELECT 1 FROM brh.projeto p
+ 	 WHERE NOT EXISTS (
+ 	 	SELECT 1 
+ 	 	  FROM brh.atribuicao a2 
+ 	 	 WHERE a2.colaborador = a.colaborador 
+ 	 	   AND a2.projeto = p.id
+ 	 )
+ );
